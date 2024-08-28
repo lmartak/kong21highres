@@ -14,7 +14,7 @@ import torch
  
 from utilities import (create_folder, get_filename, RegressionPostProcessor, 
     OnsetsFramesPostProcessor, write_events_to_midi, load_audio)
-from models import Note_pedal
+from models import Note_pedal, Regress_onset_offset_frame_velocity_CRNN
 from pytorch_utils import move_data_to_device, forward
 import config
 
@@ -48,6 +48,7 @@ class PianoTranscription(object):
 
         # Build model
         Model = eval(model_type)
+        print(f'Model: {Model}')
         self.model = Model(frames_per_second=self.frames_per_second, 
             classes_num=self.classes_num)
 
@@ -204,13 +205,15 @@ def inference(args):
     post_processor_type = args.post_processor_type
     device = 'cuda' if args.cuda and torch.cuda.is_available() else 'cpu'
     audio_path = args.audio_path
+    model_name = args.model_name
     
     sample_rate = config.sample_rate
     segment_samples = sample_rate * 10  
     """Split audio to multiple 10-second segments for inference"""
 
     # Paths
-    midi_path = 'results/{}.mid'.format(get_filename(audio_path))
+    # midi_path = 'results/{}.mid'.format(get_filename(audio_path))
+    midi_path = audio_path.replace('.wav', f'_{model_name}.mid')
     create_folder(os.path.dirname(midi_path))
  
     # Load audio
@@ -253,6 +256,7 @@ def inference(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--model_name', type=str, required=True, choices=['kong', 'edwards'])
     parser.add_argument('--model_type', type=str, required=True)
     parser.add_argument('--checkpoint_path', type=str, required=True)
     parser.add_argument('--post_processor_type', type=str, default='regression', choices=['onsets_frames', 'regression'])
